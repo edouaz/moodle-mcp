@@ -1,0 +1,37 @@
+# Allow only reviewed source files: course downloads and credentials stay private.
+/*
+!/.gitignore
+!/LICENSE
+!/README.md
+!/README_UPSTREAM.md
+!/MCP_README.md
+!/TUTORIEL_VPS.md
+!/CONTRIBUTING.md
+!/SECURITY.md
+!/CHANGELOG.md
+!/requirements.txt
+!/configuration.py
+!/moodle.py
+!/install_tunnel.py
+!/setup.sh
+!/scraper.py
+!/targeted.py
+!/moodle_service.py
+!/session_lock.py
+!/mcp_server.py
+!/delivery.py
+!/sync_mac.py
+!/diagnose_mcp.py
+!/tunnel.sh
+!/prepare_vps.sh
+!/moodle-tunnel.service
+!/test_*.py
+!/docs/
+!/.github/
+# Also protect secrets and generated files inside allowed directories.
+**/__pycache__/
+**/.DS_Store
+**/.env*
+**/session.json
+**/*.log
+**/runtime.json
