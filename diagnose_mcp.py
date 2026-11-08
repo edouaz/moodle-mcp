@@ -1,4 +1,5 @@
 """Real stdio MCP check; --live opts into Moodle reads and --download one PDF."""
+from i18n import translate as tr
 import argparse
 import asyncio
 import json
@@ -59,7 +60,7 @@ async def diagnose(live=False, download=False):
                 again = await call("download_moodle_file", arguments)
                 assert again["status"] == "already_present" and again["sha256"] == result["sha256"]
                 print("EXISTING_FILE_OK")
-            print("LOCAL_MCP_LIVE_OK (pas un test via tunnel ou ChatGPT)")
+            print(tr('LOCAL_MCP_LIVE_OK (not a tunnel or ChatGPT test)'))
 
 
 if __name__ == "__main__":
@@ -70,5 +71,5 @@ if __name__ == "__main__":
     try:
         asyncio.run(diagnose(args.live, args.download))
     except Exception:
-        print("Diagnostic interrompu; voir l'erreur structuree precedente, aucun detail secret affiche.", file=sys.stderr)
+        print(tr('Diagnostic interrupted; see the previous structured error. No secret details displayed.'), file=sys.stderr)
         sys.exit(1)

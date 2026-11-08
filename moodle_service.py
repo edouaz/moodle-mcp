@@ -1,4 +1,5 @@
 """Shared CLI/MCP operations. Moodle text is untrusted data, never instructions."""
+from i18n import translate as tr
 import asyncio
 import hashlib
 import logging
@@ -32,7 +33,7 @@ class MoodleError(ValueError):
 def public_url(url):
     parts, base = urlparse(url), urlparse(scraper.BASE)
     if (parts.scheme, parts.netloc) != (base.scheme, base.netloc):
-        raise MoodleError("UNSAFE_LINK", "Lien hors du Moodle configure refuse.")
+        raise MoodleError("UNSAFE_LINK", tr('Links outside the configured Moodle instance are not allowed.'))
     query = parse_qs(parts.query)
     return urlunparse(parts._replace(query=urlencode({k: query[k][0] for k in ("id", "forcedownload") if k in query}), fragment=""))
 
@@ -40,13 +41,13 @@ def public_url(url):
 def select_one(items, key, value):
     matches = [item for item in items if str(item[key]) == str(value)]
     if len(matches) != 1:
-        raise MoodleError("INVALID_ID", "Selection absente ou ambigue; utilisez les identifiants de la liste.")
+        raise MoodleError("INVALID_ID", tr('Missing or ambiguous selection; use IDs from the listing.'))
     return matches[0]
 
 
 def paginate(items, offset=0, limit=50):
     if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 100:
-        raise MoodleError("INVALID_PAGE", "offset doit etre positif ou nul et limit compris entre 1 et 100.")
+        raise MoodleError("INVALID_PAGE", tr('offset must be non-negative and limit must be between 1 and 100.'))
     end = offset + limit
     return {"items": items[offset:end], "total": len(items), "offset": offset,
             "next_offset": end if end < len(items) else None,
@@ -56,7 +57,7 @@ def paginate(items, offset=0, limit=50):
 def file_entry(resource, url):
     url = public_url(url)
     if "/pluginfile.php/" not in urlparse(url).path:
-        raise MoodleError("UNSUPPORTED_FILE", "Lien de fichier Moodle standard introuvable.")
+        raise MoodleError("UNSUPPORTED_FILE", tr('No standard Moodle file link found.'))
     digest = hashlib.sha256(urlparse(url).path.encode()).hexdigest()[:24]
     return {"kind": "file", "id": f"{resource['id']}:{digest}",
             "resource_id": resource["id"], "section_id": resource["section_id"],
@@ -69,26 +70,26 @@ def local_path(course_id, file):
     root = DOWNLOADS.resolve()
     match = FILE_ID.fullmatch(file["id"])
     if not match:
-        raise MoodleError("INVALID_ID", "Identifiant fichier local invalide.")
+        raise MoodleError("INVALID_ID", tr('Invalid local file ID.'))
     path = root / f"course-{int(course_id)}" / scraper.safe_name(file["section_id"] or "general") / f"resource-{int(file['resource_id'])}" / match[2] / scraper.safe_name(file["name"], maxlen=180)
     if not path.resolve().is_relative_to(root) or path.is_symlink():
-        raise MoodleError("UNSAFE_PATH", "Chemin de stockage non autorise.")
+        raise MoodleError("UNSAFE_PATH", tr('Storage path is not allowed.'))
     return path
 
 
 def verify_file(path, include_text=False):
     if path.is_symlink() or not path.is_file():
-        raise MoodleError("INVALID_FILE", "Fichier local absent ou non autorise.")
+        raise MoodleError("INVALID_FILE", tr('Local file is missing or not allowed.'))
     with path.open("rb") as head:
         prefix = head.read(1024)
     if scraper.looks_like_html(prefix):
-        raise MoodleError("HTML_INSTEAD_OF_FILE", "Page HTML recue; reconnectez Moodle puis reessayez.")
+        raise MoodleError("HTML_INSTEAD_OF_FILE", tr('Received an HTML page; sign in to Moodle again and retry.'))
     with path.open("rb") as source:
         digest = hashlib.file_digest(source, "sha256").hexdigest()
     result = {"bytes": path.stat().st_size, "sha256": digest}
     if path.suffix.lower() == ".pdf":
         if not prefix.startswith(b"%PDF-"):
-            raise MoodleError("INVALID_PDF", "Signature PDF absente; fichier refuse.")
+            raise MoodleError("INVALID_PDF", tr('Missing PDF signature; file rejected.'))
         try:
             reader = PdfReader(path, strict=True)
             result["pdf_pages"] = len(reader.pages)
@@ -105,7 +106,7 @@ def verify_file(path, include_text=False):
                 result["text"] = text[:12000]
                 result["text_truncated"] = len(text) > 12000 or processed < len(reader.pages)
         except Exception:
-            raise MoodleError("INVALID_PDF", "Le PDF ne peut pas etre lu; fichier refuse.") from None
+            raise MoodleError("INVALID_PDF", tr('The PDF could not be read; file rejected.')) from None
     return result
 
 
@@ -128,18 +129,18 @@ async def save_file(ctx, course_id, file, include_text=False):
                 continue
             break
         if response is None or not response.ok:
-            raise MoodleError("DOWNLOAD_FAILED", "Reponse HTTP en echec; la meme demande peut etre reessayee.")
+            raise MoodleError("DOWNLOAD_FAILED", tr('HTTP request failed; the same request can be retried.'))
         ctype = response.headers.get("content-type", "").lower()
         if "html" in ctype:
-            raise MoodleError("HTML_INSTEAD_OF_FILE", "Page HTML recue au lieu du fichier. Reconnexion : " + RECONNECT)
+            raise MoodleError("HTML_INSTEAD_OF_FILE", tr('Received HTML instead of a file. Sign in again: ') + RECONNECT)
         size = response.headers.get("content-length", "")
         if size.isdigit() and int(size) > 20 * 1024 * 1024:
-            raise MoodleError("FILE_TOO_LARGE", "Limite personnelle : 20 Mio par fichier.")
+            raise MoodleError("FILE_TOO_LARGE", tr('Download limit: 20 MiB per file.'))
         body = await response.body()
         if len(body) > 20 * 1024 * 1024:
-            raise MoodleError("FILE_TOO_LARGE", "Limite personnelle : 20 Mio par fichier.")
+            raise MoodleError("FILE_TOO_LARGE", tr('Download limit: 20 MiB per file.'))
         if not body or scraper.looks_like_html(body):
-            raise MoodleError("INVALID_FILE", "Fichier vide ou HTML; aucun fichier enregistre, reessayez apres reconnexion.")
+            raise MoodleError("INVALID_FILE", tr('Empty file or HTML; nothing saved. Sign in again and retry.'))
         path.parent.mkdir(parents=True, exist_ok=True)
         # Publish only a complete, validated file; never leave a partial final file.
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".moodle-part-", suffix=path.suffix, delete=False) as output:
@@ -166,7 +167,7 @@ async def connection():
         with session_lock():
             async with asyncio.timeout(100):
                 if not scraper.STATE.exists():
-                    raise MoodleError("SESSION_EXPIRED", "Session absente. Reconnexion : " + RECONNECT)
+                    raise MoodleError("SESSION_EXPIRED", tr('No saved session. Sign in again: ') + RECONNECT)
                 async with scraper.async_playwright() as p:
                     browser = await p.chromium.launch(headless=True)
                     try:
@@ -174,7 +175,7 @@ async def connection():
                         page = await ctx.new_page()
                         page.set_default_timeout(20000)
                         if not await scraper.is_logged_in(page):
-                            raise MoodleError("SESSION_EXPIRED", "Session invite ou expiree. Reconnexion : " + RECONNECT)
+                            raise MoodleError("SESSION_EXPIRED", tr('Guest or expired session. Sign in again: ') + RECONNECT)
                         yield page, ctx
                     finally:
                         await browser.close()
@@ -182,11 +183,11 @@ async def connection():
         raise
     except RuntimeError as exc:
         if str(exc).startswith("MOODLE_BUSY:"):
-            raise MoodleError("MOODLE_BUSY", "Une operation Moodle est deja en cours; reessayez.") from None
-        raise MoodleError("MOODLE_FAILED", "Operation Moodle interrompue; vous pouvez reessayer.") from None
+            raise MoodleError("MOODLE_BUSY", tr('Another Moodle operation is in progress; try again.')) from None
+        raise MoodleError("MOODLE_FAILED", tr('Moodle operation interrupted; you can retry.')) from None
     except Exception:
         # Third-party errors may contain credentials, URLs or cookie values.
-        raise MoodleError("MOODLE_FAILED", "Operation Moodle en echec ou trop longue; reessayez ou reconnectez la session.") from None
+        raise MoodleError("MOODLE_FAILED", tr('Moodle operation failed or timed out; retry or sign in again.')) from None
 
 
 async def courses_on_page(page):
@@ -218,10 +219,10 @@ async def inventory(page, ctx, course_id, resource_id=None):
         links = await scraper.find_files_on_mod_page(page, ctx, resource["url"])
         # Empty folders are valid; a non-folder without a file is an explicit failure.
         if not links and resource["kind"] != "folder":
-            raise MoodleError("RESOURCE_UNAVAILABLE", "Ressource inaccessible ou session expiree; reconnectez puis reessayez.")
+            raise MoodleError("RESOURCE_UNAVAILABLE", tr('Resource unavailable or session expired; sign in again and retry.'))
         files.extend(file_entry(resource, link) for link in dict.fromkeys(links))
     if not await scraper.is_logged_in(page):
-        raise MoodleError("SESSION_EXPIRED", "Session expiree pendant la lecture. Reconnexion : " + RECONNECT)
+        raise MoodleError("SESSION_EXPIRED", tr('Session expired while reading. Sign in again: ') + RECONNECT)
     return course, sections, modules, sorted(files, key=lambda f: f["id"])
 
 
@@ -250,7 +251,7 @@ async def list_files(course_id, offset=0, limit=50):
 
 async def search_files(course_id, query, offset=0, limit=50):
     if not query.strip() or len(query) > 200:
-        raise MoodleError("INVALID_QUERY", "Recherche vide ou trop longue (maximum 200 caracteres).")
+        raise MoodleError("INVALID_QUERY", tr('Search query is empty or too long (maximum 200 characters).'))
     paginate([], offset, limit)
     async with connection() as (page, ctx):
         course, _, _, files = await inventory(page, ctx, course_id)
@@ -265,10 +266,10 @@ async def download_file(course_id, file_id=None, resource_id=None, filename=None
     if file_id:
         match = FILE_ID.fullmatch(file_id)
         if not match:
-            raise MoodleError("INVALID_ID", "Identifiant fichier invalide; utilisez la recherche ou la liste.")
+            raise MoodleError("INVALID_ID", tr('Invalid file ID; use search or a file listing.'))
         resource_id = int(match[1])
     if resource_id is None:
-        raise MoodleError("INVALID_ID", "Un identifiant fichier ou ressource est requis.")
+        raise MoodleError("INVALID_ID", tr('A file ID or resource ID is required.'))
     async with connection() as (page, ctx):
         course, _, _, files = await inventory(page, ctx, course_id, resource_id)
         if file_id:
@@ -278,7 +279,7 @@ async def download_file(course_id, file_id=None, resource_id=None, filename=None
         elif len(files) == 1:
             file = files[0]
         else:
-            raise MoodleError("INVALID_ID", "Plusieurs fichiers ou aucun : choisissez un identifiant fichier de la liste.")
+            raise MoodleError("INVALID_ID", tr('Multiple files or no match: choose a file ID from the listing.'))
         result = await save_file(ctx, course_id, file, include_text)
         transfer = None
         if destination_root is not None:
@@ -287,4 +288,4 @@ async def download_file(course_id, file_id=None, resource_id=None, filename=None
         return {"course": course, "file": file, **result,
                 "delivery": transfer,
                 "content_trust": "untrusted_moodle_data", "file_bytes_transferred_to_chatgpt": False,
-                "transfer_note": "Fichier sur le serveur MCP. Si delivery est renseigne, transfert en attente du client Mac version 2; verifier get_mac_delivery_status pour la reception et le chemin final. La copie VPS est nettoyee apres accuse SHA-256. Aucun fichier joint ChatGPT."}
+                "transfer_note": tr('File saved on the MCP server. If delivery is present, transfer is queued for the Mac v2 client; check get_mac_delivery_status for receipt and the final path. The VPS copy is removed after SHA-256 acknowledgement. No ChatGPT attachment is created.')}

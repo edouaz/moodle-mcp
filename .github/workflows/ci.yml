@@ -19,5 +19,5 @@ jobs:
           cache: pip
       - run: python -m pip install -r requirements.txt
       - run: python -m playwright install --with-deps chromium
-      - run: python -m unittest -v test_login_only test_targeted test_service test_mcp test_delivery test_sync_mac test_setup
+      - run: python -m unittest -v test_login_only test_targeted test_service test_mcp test_delivery test_sync_mac test_setup test_i18n
       - run: python diagnose_mcp.py

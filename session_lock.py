@@ -1,4 +1,5 @@
 """One browser operation at a time, across CLI and MCP processes (Mac/Linux)."""
+from i18n import translate as tr
 import fcntl
 from contextlib import contextmanager
 from pathlib import Path
@@ -11,7 +12,7 @@ def session_lock():
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise RuntimeError("MOODLE_BUSY: une operation Moodle est deja en cours; reessayez.") from None
+            raise RuntimeError(tr('MOODLE_BUSY: another Moodle operation is in progress; try again.')) from None
         try:
             yield
         finally:

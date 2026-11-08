@@ -35,3 +35,6 @@
 **/session.json
 **/*.log
 **/runtime.json
+
+!/i18n.py
+!/locales/

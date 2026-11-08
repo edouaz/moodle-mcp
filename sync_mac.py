@@ -1,4 +1,5 @@
 """Mac client v2: cached folder inventory, queued SSH delivery and verified receipts."""
+from i18n import translate as tr
 import argparse
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -32,9 +33,9 @@ def write_json(path, value):
 
 def ssh_command(host, remote_path, action):
     if not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_.@-]*", host):
-        raise ValueError("Hote SSH invalide.")
+        raise ValueError(tr('Invalid SSH host.'))
     if not re.fullmatch(r"[a-zA-Z0-9_/.-]+", remote_path) or remote_path.startswith("-"):
-        raise ValueError("Chemin distant invalide.")
+        raise ValueError(tr('Invalid remote path.'))
     # Keep --remote-path compatible with the old Mac LaunchAgent's downloads path.
     helper = str(Path(remote_path.rstrip("/")).parent / "delivery.py")
     remote = " ".join(shlex.quote(p) for p in ["python3", helper, *action])
@@ -48,7 +49,7 @@ def rpc(host, remote_path, payload):
                             check=True, timeout=120)
     value = json.loads(result.stdout)
     if value.get("protocol") != 2:
-        raise ValueError("Le serveur n'utilise pas le protocole de transfert v2.")
+        raise ValueError(tr('The server does not use delivery protocol v2.'))
     return value
 
 
@@ -71,10 +72,10 @@ def inventory(home):
         roots[name] = str(root)
         directories[name] = []
         if not root.is_dir():
-            errors[name] = "Dossier racine absent ou inaccessible"
+            errors[name] = tr('Root folder is missing or inaccessible')
             continue
         def onerror(error):
-            errors[name] = "Inventaire partiel : acces refuse ou dossier disparu"
+            errors[name] = tr('Partial inventory: access denied or folder no longer exists')
         for current, children, _ in os.walk(root, followlinks=False, onerror=onerror):
             children[:] = sorted(c for c in children if not c.startswith(".")
                                  and not (Path(current) / c).is_symlink()
@@ -107,11 +108,11 @@ def inventory(home):
 @contextmanager
 def destination_directory(home, root, folder):
     if root not in ROOTS or not isinstance(folder, str) or len(folder) > 1000:
-        raise ValueError("Destination invalide.")
+        raise ValueError(tr('Invalid destination.'))
     parts = folder.split("/") if folder else []
     if any(not p or p in (".", "..") or p.startswith(".") or len(p.encode()) > 200
            or any(ord(c) < 32 or c in "\\:" for c in p) for p in parts):
-        raise ValueError("Sous-dossier invalide.")
+        raise ValueError(tr('Invalid subfolder.'))
     base = home / root
     base.mkdir(mode=0o700, exist_ok=True)
     descriptor = os.open(base, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -133,11 +134,11 @@ def destination_directory(home, root, folder):
 def validate_job(job):
     name = job["name"]
     if not re.fullmatch(r"[0-9a-f]{32}", job["id"]) or not re.fullmatch(r"[0-9a-f]{64}", job["sha256"]):
-        raise ValueError("Identifiant ou empreinte invalide.")
+        raise ValueError(tr('Invalid ID or digest.'))
     if not name or name.startswith(".") or len(name.encode()) > 230 or any(ord(c) < 32 or c in "/\\:" for c in name):
-        raise ValueError("Nom de fichier invalide.")
+        raise ValueError(tr('Invalid filename.'))
     if type(job["bytes"]) is not int or not 0 < job["bytes"] <= MAX_BYTES:
-        raise ValueError("Taille de fichier invalide.")
+        raise ValueError(tr('Invalid file size.'))
 
 
 def publish(directory_fd, temporary, name, sha):
@@ -162,7 +163,7 @@ def publish(directory_fd, temporary, name, sha):
             with os.fdopen(descriptor, "rb") as stream:
                 if stat.S_ISREG(os.fstat(stream.fileno()).st_mode) and file_hash(stream) == sha:
                     return candidate
-    raise ValueError("Trop de conflits de noms dans ce dossier.")
+    raise ValueError(tr('Too many filename conflicts in this folder.'))
 
 
 def receive(job, home, fetch):
@@ -181,13 +182,13 @@ def receive(job, home, fetch):
                 fetch(job["id"], output)
                 output.flush()
                 if os.fstat(output.fileno()).st_size != job["bytes"] or file_hash(output) != job["sha256"]:
-                    raise ValueError("Taille ou SHA-256 incorrect; copie VPS conservee.")
+                    raise ValueError(tr('Incorrect size or SHA-256; VPS copy kept.'))
                 os.fsync(output.fileno())
             candidate = publish(directory_fd, temporary, job["name"], job["sha256"])
             final = folder / candidate
             # Do not acknowledge if the directory was moved/deleted during the copy.
             if final.is_symlink() or not final.resolve().is_relative_to((home / job["destination_root"]).resolve()) or path_hash(final) != job["sha256"]:
-                raise ValueError("Destination modifiee pendant le transfert; copie VPS conservee.")
+                raise ValueError(tr('Destination changed during transfer; VPS copy kept.'))
             return {"id": job["id"], "sha256": job["sha256"], "final_path": str(final)}
         finally:
             os.unlink(temporary, dir_fd=directory_fd)
@@ -276,18 +277,18 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["once", "install", "status", "uninstall"])
-    parser.add_argument("--host", help="Hote SSH ou alias configure dans ~/.ssh/config")
+    parser.add_argument("--host", help=tr('SSH host or alias configured in ~/.ssh/config'))
     parser.add_argument("--remote-path", default="project/moodle-mcp/downloads")
     parser.add_argument("--destination", type=Path, default=Path.home() / "Downloads/Moodle",
-                        help="Ancien dossier v1 a aplatir; les nouveaux depots sont choisis par le MCP.")
+                        help=tr('Legacy v1 folder to flatten; new destinations are selected by the MCP.'))
     args = parser.parse_args()
     if args.action in ("once", "install") and not args.host:
-        parser.error("--host est requis (ex. etudiant@vps.example.org).")
+        parser.error(tr('--host is required (e.g. student@vps.example.org).'))
     destination = args.destination.expanduser().resolve()
     if args.action == "once":
         return sync(args.host, args.remote_path, destination)
     if sys.platform != "darwin":
-        parser.error("install/status/uninstall s'executent sur le Mac.")
+        parser.error(tr('Run install/status/uninstall on the Mac.'))
     domain = f"gui/{os.getuid()}"
     target = f"{domain}/{LABEL}"
     plist = Path.home() / "Library/LaunchAgents" / f"{LABEL}.plist"
@@ -296,10 +297,10 @@ def main():
     if args.action == "uninstall":
         subprocess.run(["/bin/launchctl", "bootout", target], check=False, capture_output=True)
         plist.unlink(missing_ok=True)
-        print("Synchronisation retiree; documents conserves.")
+        print(tr('Sync removed; documents kept.'))
         return 0
     if sync(args.host, args.remote_path, destination):
-        print("Certains depots ont echoue; ils restent en attente sur le VPS.", file=sys.stderr)
+        print(tr('Some deliveries failed; they remain queued on the VPS.'), file=sys.stderr)
     log = Path.home() / "Library/Logs" / f"{LABEL}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     plist.parent.mkdir(parents=True, exist_ok=True)
@@ -307,7 +308,7 @@ def main():
         plistlib.dump(agent(args.host, args.remote_path, destination, log), output)
     subprocess.run(["/bin/launchctl", "bootout", target], check=False, capture_output=True)
     subprocess.run(["/bin/launchctl", "bootstrap", domain, str(plist)], check=True)
-    print("Client v2 actif : depots verifies, inventaire des dossiers et file hors ligne, toutes les 30 secondes.")
+    print(tr('Client v2 active: verified deliveries, folder inventory and offline queue, every 30 seconds.'))
     return 0
 
 
@@ -315,5 +316,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (ValueError, OSError, subprocess.SubprocessError) as exc:
-        print(f"Synchronisation en echec : {exc}", file=sys.stderr)
+        print(f"Sync failed: {exc}", file=sys.stderr)
         sys.exit(1)

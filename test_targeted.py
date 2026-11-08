@@ -114,8 +114,9 @@ class CommandTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(download.await_count, int(command == "download"))
                 self.assertEqual(list(Path(directory).iterdir()), [])
             else:
-                with self.assertRaisesRegex(ValueError, "Session invite ou expiree"):
+                with self.assertRaises(service.MoodleError) as error:
                     await targeted.run(args)
+                self.assertEqual(error.exception.code, "SESSION_EXPIRED")
                 courses.assert_not_awaited()
                 download.assert_not_awaited()
             browser.close.assert_awaited_once()

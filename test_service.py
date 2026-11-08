@@ -103,8 +103,9 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         response.status = 302
         response.headers["location"] = "https://other.example/private.pdf"
         ctx = SimpleNamespace(request=SimpleNamespace(get=AsyncMock(return_value=response)))
-        with self.assertRaisesRegex(service.MoodleError, "hors du Moodle"):
+        with self.assertRaises(service.MoodleError) as error:
             await service.save_file(ctx, 2798, self.file)
+        self.assertEqual(error.exception.code, "UNSAFE_LINK")
         ctx.request.get.assert_awaited_once()
 
     async def test_invalid_selection_and_empty_query_do_not_open_browser(self):

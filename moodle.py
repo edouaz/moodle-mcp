@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Moodle MCP: guided setup and daily commands, on macOS and Linux."""
+from i18n import translate as tr, SUPPORTED
 import argparse
 import getpass
 import json
@@ -28,14 +29,14 @@ def ask(label, default='', validate=None):
         value = input(f'{label}' + (f' [{default}]' if default else '') + ' : ').strip() or default
         try:
             if not value:
-                raise ValueError('Une valeur est requise.')
+                raise ValueError(tr('A value is required.'))
             return validate(value) if validate else value
         except ValueError as exc:
             print(exc)
 
 
 def yes(label, default=False):
-    return input(f'{label} [{"O/n" if default else "o/N"}] : ').strip().lower() in (
+    return input(f'{label} [{tr("Y/n") if default else tr("y/N")}] : ').strip().lower() in (
         ('', 'o', 'oui', 'y', 'yes') if default else ('o', 'oui', 'y', 'yes'))
 
 
@@ -45,13 +46,13 @@ def tunnel_binary():
     if not candidate and fallback.is_file():
         candidate = str(fallback)
     if not candidate:
-        raise ValueError('tunnel-client absent. Lancez python3 install_tunnel.py ou relancez le setup.')
+        raise ValueError(tr('tunnel-client is missing. Run python3 install_tunnel.py or run setup again.'))
     return candidate
 
 
 def tunnel_id(value):
     if not re.fullmatch(r'tunnel_([a-z0-9]{4}_)?[a-z0-9]{32}', value):
-        raise ValueError('Collez le vrai tunnel_id retourne par OpenAI Platform (tunnel_…).')
+        raise ValueError(tr('Paste the actual tunnel_id returned by OpenAI Platform (tunnel_…).'))
     return value
 
 
@@ -62,8 +63,8 @@ def init_tunnel(identifier):
                'env:CONTROL_PLANE_API_KEY', '--health-listen-addr', '127.0.0.1:8789',
                '--mcp-command', shlex.join([python(), str(ROOT / 'mcp_server.py')])]
     if (ROOT / '.tunnel/moodle.yaml').exists():
-        if not yes('Remplacer le profil tunnel existant ?'):
-            raise ValueError('Profil conserve. Relancez le setup pour le modifier.')
+        if not yes(tr('Replace the existing tunnel profile?')):
+            raise ValueError(tr('Profile kept. Run setup again to change it.'))
         command.append('--force')
     subprocess.run(command, check=True)
 
@@ -76,15 +77,15 @@ def tunnel(action):
                 print(path, response.status, response.read().decode())
         return 0
     if not (ROOT / '.tunnel/moodle.yaml').exists():
-        raise ValueError('Configurez le tunnel avec python3 moodle.py setup.')
+        raise ValueError(tr('Configure the tunnel with python3 moodle.py setup.'))
     env = os.environ.copy()
     env['CONTROL_PLANE_API_KEY'] = env.get('CONTROL_PLANE_API_KEY') or read_json(RUNTIME).get('api_key', '')
     if not env['CONTROL_PLANE_API_KEY']:
         if not sys.stdin.isatty():
-            raise ValueError('Cle runtime absente. Relancez le setup depuis un terminal.')
-        env['CONTROL_PLANE_API_KEY'] = getpass.getpass('Cle runtime OpenAI (masquee) : ').strip()
+            raise ValueError(tr('No runtime key. Run setup again in a terminal.'))
+        env['CONTROL_PLANE_API_KEY'] = getpass.getpass(tr('OpenAI runtime key (hidden): ')).strip()
     if not env['CONTROL_PLANE_API_KEY']:
-        raise ValueError('Cle runtime absente.')
+        raise ValueError(tr('No runtime key provided.'))
     command = [tunnel_binary(), action, '--profile-dir', str(ROOT / '.tunnel'), '--profile', 'moodle',
                '--mcp.stdio-send-initialized-notification', '--mcp.max-concurrent-requests', '1']
     if action == 'doctor':
@@ -107,81 +108,89 @@ def service_file():
 
 def install_service():
     if sys.platform != 'linux' or not shutil.which('systemctl'):
-        raise ValueError('Le service utilisateur exige Linux avec systemd.')
+        raise ValueError(tr('The user service requires Linux with systemd.'))
     if not read_json(RUNTIME).get('api_key') and not os.environ.get('CONTROL_PLANE_API_KEY'):
-        raise ValueError('Enregistrez la cle runtime dans le setup avant d’installer le service.')
+        raise ValueError(tr('Save the runtime key during setup before installing the service.'))
     if not read_json(RUNTIME).get('api_key'):
-        raise ValueError('Une cle dans le terminal ne persiste pas dans systemd. Relancez setup et enregistrez-la.')
+        raise ValueError(tr('A terminal environment key does not persist in systemd. Run setup and save it.'))
     if not (ROOT / '.tunnel/moodle.yaml').exists():
-        raise ValueError('Configurez d’abord le tunnel avec setup.')
+        raise ValueError(tr('Configure the tunnel with setup first.'))
     destination = Path.home() / '.config/systemd/user/moodle-tunnel.service'
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(service_file())
     subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
     subprocess.run(['systemctl', '--user', 'enable', 'moodle-tunnel.service'], check=True)
-    print('Service installe et active au prochain demarrage de la session utilisateur.')
-    print('Apres connexion Moodle : systemctl --user start moodle-tunnel')
-    print('Pour demarrer au boot sans session SSH : sudo loginctl enable-linger "$USER"')
+    print(tr('Service installed and enabled for the next user session.'))
+    print(tr('After signing in to Moodle: systemctl --user start moodle-tunnel'))
+    print(tr('To start at boot without an SSH session: sudo loginctl enable-linger "$USER"'))
 
 
 def setup(vps=False):
     if os.name != 'posix':
-        raise ValueError('Utilisez macOS, Linux ou WSL2 (voir documentation).')
-    print('\n🎓 Moodle MCP · Bienvenue !\nVos cours, votre session, votre machine.\n')
+        raise ValueError(tr('Use macOS, Linux or WSL2 (see the documentation).'))
+    print(tr('\n🎓 Moodle MCP · Welcome!\nYour courses, your session, your machine.\n'))
     old = read_json(CONFIG)
-    base = ask('1/4 · URL racine Moodle (ex. https://moodle.universite.fr)', old.get('campus_url', ''), campus_url)
+    base = ask(tr('1/4 · Moodle base URL (e.g. https://moodle.university.edu)'), old.get('campus_url', ''), campus_url)
     if old.get('campus_url', 'https://moodle.uclouvain.be') != base and (ROOT / 'session.json').exists():
-        raise ValueError('Universite differente : supprimez explicitement session.json avant de changer l’URL.')
-    mode = ask('2/4 · Installation : local ou vps', 'vps' if vps else old.get('mode', 'local'),
-               lambda x: x if x in ('local', 'vps') else (_ for _ in ()).throw(ValueError('Choisissez local ou vps.')))
+        raise ValueError(tr('Different university: explicitly remove session.json before changing the URL.'))
+    mode = ask(tr('2/4 · Installation: local or vps'), 'vps' if vps else old.get('mode', 'local'),
+               lambda x: x if x in ('local', 'vps') else (_ for _ in ()).throw(ValueError(tr('Choose local or vps.'))))
     private_json(CONFIG, {'campus_url': base, 'mode': mode})
-    print('Configuration enregistree. Aucun mot de passe universitaire ne sera demande ici.')
-    print('\n3/4 · Connexion Moodle : le navigateur gere votre SSO et votre MFA.')
+    print(tr('Configuration saved. No university password will be requested here.'))
+    print(tr('\n3/4 · Moodle sign-in: the browser handles your SSO and MFA.'))
     if mode == 'vps' and not os.environ.get('DISPLAY') and not os.environ.get('WAYLAND_DISPLAY'):
-        print('VPS sans affichage : voir docs/vps.md pour une connexion graphique securisee.')
-        print('Puis lancez : python3 moodle.py login')
-    elif yes('Ouvrir le navigateur pour se connecter maintenant ?', True):
+        print(tr('Headless VPS: see docs/vps.md for secure graphical sign-in.'))
+        print(tr('Then run: python3 moodle.py login'))
+    elif yes(tr('Open the browser to sign in now?'), True):
         if run_script('scraper.py', '--login-only'):
-            raise ValueError('Connexion interrompue. Reessayez avec python3 moodle.py login.')
-    print('\n4/4 · Tunnel prive OpenAI (facultatif pour une CLI ou un client MCP stdio).')
-    if yes('Configurer le tunnel ?', True):
-        print('Creez votre tunnel : https://platform.openai.com/settings/organization/tunnels')
-        print('Cle runtime de la meme organisation : https://platform.openai.com/settings/organization/api-keys')
-        print('Acces personnel uniquement : toute personne autorisee sur le tunnel utilise votre session Moodle.')
+            raise ValueError(tr('Sign-in interrupted. Try again with python3 moodle.py login.'))
+    print(tr('\n4/4 · Private OpenAI tunnel (optional for CLI or stdio MCP clients).'))
+    if yes(tr('Configure the tunnel?'), True):
+        print(tr('Create your tunnel: https://platform.openai.com/settings/organization/tunnels'))
+        print(tr('Runtime key from the same organization: https://platform.openai.com/settings/organization/api-keys'))
+        print(tr('Personal use only: anyone authorized on this tunnel can use your Moodle session.'))
         try:
             tunnel_binary()
         except ValueError:
-            if yes('Installer le client officiel tunnel-client ?', True):
+            if yes(tr('Install the official tunnel-client?'), True):
                 if run_script('install_tunnel.py'):
-                    raise ValueError('Installation du tunnel echouee. Voir docs/tunnel.md.')
+                    raise ValueError(tr('Tunnel installation failed. See docs/tunnel.md.'))
             else:
-                raise ValueError('Configuration Moodle conservee. Installez tunnel-client puis relancez setup.')
-        identifier = ask('Identifiant du tunnel', old.get('tunnel_id', ''), tunnel_id)
+                raise ValueError(tr('Moodle configuration kept. Install tunnel-client and run setup again.'))
+        identifier = ask(tr('Tunnel ID'), old.get('tunnel_id', ''), tunnel_id)
         init_tunnel(identifier)
         private_json(CONFIG, {'campus_url': base, 'mode': mode, 'tunnel_id': identifier})
-        key = getpass.getpass('Cle runtime OpenAI (masquee, Entree pour garder la cle existante) : ').strip()
+        key = getpass.getpass(tr('OpenAI runtime key (hidden, Enter to keep the existing key): ')).strip()
         if key:
-            if yes('Conserver la cle sur cette machine (fichier prive 600, necessaire au service VPS) ?', mode == 'vps'):
+            if yes(tr('Save the key on this machine (private 600 file, required for the VPS service)?'), mode == 'vps'):
                 private_json(RUNTIME, {'api_key': key})
             else:
                 # An older persisted key must not silently win over the new key next time.
                 RUNTIME.unlink(missing_ok=True)
-                print('Cle non conservee. Elle sera redemandee au lancement du tunnel.')
-        if mode == 'vps' and yes('Installer le service systemd utilisateur ?'):
+                print(tr('Key not saved. You will be prompted when starting the tunnel.'))
+        if mode == 'vps' and yes(tr('Install the systemd user service?')):
             install_service()
-    print('\n✓ Setup termine. Prochaines etapes :')
-    print('  python3 moodle.py doctor       # diagnostic MCP local, sans lire Moodle')
-    print('  python3 moodle.py courses      # verifier vos cours apres connexion')
-    print('  python3 moodle.py tunnel run   # lancer le tunnel configure')
-    print('  Documentation : https://edouaz.github.io/moodle-mcp/guide.html')
+    print(tr('\n✓ Setup complete. Next steps:'))
+    print(tr('  python3 moodle.py doctor       # local MCP check, without reading Moodle'))
+    print(tr('  python3 moodle.py courses      # check your courses after signing in'))
+    print(tr('  python3 moodle.py tunnel run   # start the configured tunnel'))
+    print(tr('  Documentation: https://edouaz.github.io/moodle-mcp/guide.html'))
     return 0
 
 
 def main():
     os.umask(0o077)
+    # Accept --lang before or after the subcommand, and propagate it to children.
+    language_parser = argparse.ArgumentParser(add_help=False)
+    language_parser.add_argument('--lang', choices=SUPPORTED)
+    locale_args, remaining = language_parser.parse_known_args()
+    if locale_args.lang:
+        os.environ['MOODLE_MCP_LANG'] = locale_args.lang
+    sys.argv[1:] = remaining
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--lang', choices=SUPPORTED, help='Interface language: en (default) or fr')
     commands = parser.add_subparsers(dest='command', required=True)
-    wizard = commands.add_parser('setup', help='Assistant de configuration')
+    wizard = commands.add_parser('setup', help=tr('Guided setup'))
     wizard.add_argument('--vps', action='store_true')
     for name in ('login', 'doctor', 'serve', 'install-service'):
         commands.add_parser(name)
@@ -191,7 +200,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] in ('session', 'courses', 'files', 'search', 'download'):
         return run_script('targeted.py', *sys.argv[1:])
     for name in ('session', 'courses', 'files', 'search', 'download'):
-        commands.add_parser(name, add_help=False, help='Voir python3 targeted.py --help')
+        commands.add_parser(name, add_help=False, help=tr('See python3 targeted.py --help'))
     args = parser.parse_args()
     if args.command == 'setup':
         return setup(args.vps)
@@ -208,15 +217,15 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except (KeyboardInterrupt, EOFError):
-        print('\nInterrompu. Relancez la commande pour continuer.', file=sys.stderr)
+        print(tr('\nInterrupted. Run the command again to continue.'), file=sys.stderr)
         sys.exit(130)
     except json.JSONDecodeError:
-        print('Configuration JSON invalide. Corrigez les fichiers prives ou relancez setup.', file=sys.stderr)
+        print(tr('Invalid JSON configuration. Fix the private files or run setup again.'), file=sys.stderr)
         sys.exit(1)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(1)
     except (OSError, subprocess.SubprocessError):
         # Do not print exceptions from tunnel subprocesses or malformed secret files.
-        print('Commande en echec. Verifiez la configuration, les dependances et docs/troubleshooting.md.', file=sys.stderr)
+        print(tr('Command failed. Check your configuration, dependencies and docs/troubleshooting.md.'), file=sys.stderr)
         sys.exit(1)

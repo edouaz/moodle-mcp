@@ -13,7 +13,7 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
         async with stdio_client(parameters) as (reader, writer):
             async with ClientSession(reader, writer) as client:
                 info = await client.initialize()
-                self.assertEqual(info.serverInfo.name, "Moodle personnel")
+                self.assertEqual(info.serverInfo.name, "Moodle MCP")
                 tools = (await client.list_tools()).tools
                 self.assertEqual(len(tools), 7)
                 for tool in tools:

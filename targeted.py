@@ -1,4 +1,5 @@
 """Read-only Moodle listings and one explicitly selected download."""
+from i18n import translate as tr
 import argparse
 import asyncio
 import json
@@ -27,17 +28,17 @@ async def run(args):
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
     commands = root.add_subparsers(dest="command", required=True)
-    commands.add_parser("session", help="Verifier la session sans la retourner")
-    courses = commands.add_parser("courses", help="Liste des cours, aucun telechargement")
-    files = commands.add_parser("files", help="Sections, ressources et contenu des dossiers")
+    commands.add_parser("session", help=tr('Check the session without returning its contents'))
+    courses = commands.add_parser("courses", help=tr('List courses without downloading files'))
+    files = commands.add_parser("files", help=tr('Sections, resources and folder contents'))
     files.add_argument("--course", type=int, required=True)
-    download = commands.add_parser("download", help="Un seul fichier, sans ecrasement")
+    download = commands.add_parser("download", help=tr('One file, without overwriting existing files'))
     download.add_argument("--course", type=int, required=True)
     download.add_argument("--resource", type=int)
     download.add_argument("--file-id")
     download.add_argument("--include-text", action="store_true")
-    download.add_argument("--file", help="Nom exact du fichier dans un dossier")
-    search = commands.add_parser("search", help="Chercher un fichier par nom")
+    download.add_argument("--file", help=tr('Exact filename within a folder'))
+    search = commands.add_parser("search", help=tr('Search for a file by name'))
     search.add_argument("--course", type=int, required=True)
     search.add_argument("query")
     for listing in (courses, files, search):
@@ -50,11 +51,11 @@ if __name__ == "__main__":
     try:
         asyncio.run(run(parser().parse_args()))
     except ValueError as exc:
-        print(f"Erreur : {exc}", file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         sys.exit(2)
     except KeyboardInterrupt:
         sys.exit(1)
     except Exception as exc:
         # Playwright exceptions can embed authenticated URLs: show only the type.
-        print(f"Erreur technique : {type(exc).__name__}. Aucun echec memorise; vous pouvez reessayer.", file=sys.stderr)
+        print(f"Technical error: {type(exc).__name__}. No failure is cached; you can retry.", file=sys.stderr)
         sys.exit(2)

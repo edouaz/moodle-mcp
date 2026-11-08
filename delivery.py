@@ -1,4 +1,5 @@
 """Persistent, private Mac delivery queue and its SSH-only protocol (stdlib only)."""
+from i18n import translate as tr
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
@@ -33,13 +34,13 @@ def now():
 
 def destination(root, folder):
     if root not in ROOTS:
-        raise DeliveryError("INVALID_DESTINATION", "Choisir Documents, Desktop ou Downloads.")
+        raise DeliveryError("INVALID_DESTINATION", tr('Choose Documents, Desktop or Downloads.'))
     if not isinstance(folder, str) or len(folder) > 1000:
-        raise DeliveryError("INVALID_DESTINATION", "Sous-dossier trop long.")
+        raise DeliveryError("INVALID_DESTINATION", tr('Subfolder path is too long.'))
     parts = folder.split("/") if folder else []
     if any(not p or p in (".", "..") or p.startswith(".") or len(p.encode()) > 200
            or any(ord(c) < 32 or c in "\\:" for c in p) for p in parts):
-        raise DeliveryError("INVALID_DESTINATION", "Utiliser un chemin relatif sans .., dossier cache ni caractere de controle.")
+        raise DeliveryError("INVALID_DESTINATION", tr('Use a relative path without .., hidden folders or control characters.'))
     return root, folder
 
 
@@ -82,7 +83,7 @@ def set_setting(db, key, value):
 def source_path(relative):
     path = DOWNLOADS / relative
     if path.is_symlink() or not path.resolve().is_relative_to(DOWNLOADS.resolve()):
-        raise DeliveryError("UNSAFE_PATH", "Fichier source hors du cache Moodle.")
+        raise DeliveryError("UNSAFE_PATH", tr('Source file is outside the Moodle cache.'))
     return path
 
 
@@ -90,14 +91,14 @@ def enqueue(path, root="Downloads", folder="Moodle"):
     destination(root, folder)
     path = Path(path)
     if path.is_symlink():
-        raise DeliveryError("UNSAFE_PATH", "Lien symbolique source refuse.")
+        raise DeliveryError("UNSAFE_PATH", tr('Source file symlinks are not allowed.'))
     try:
         relative = str(path.resolve().relative_to(DOWNLOADS.resolve()))
     except ValueError:
-        raise DeliveryError("UNSAFE_PATH", "Fichier source hors du cache Moodle.") from None
+        raise DeliveryError("UNSAFE_PATH", tr('Source file is outside the Moodle cache.')) from None
     path = source_path(relative)
     if not path.is_file() or path.stat().st_size > MAX_BYTES:
-        raise DeliveryError("INVALID_FILE", "Fichier source absent ou trop grand.")
+        raise DeliveryError("INVALID_FILE", tr('Source file is missing or too large.'))
     sha = digest(path)
     with database() as db:
         existing = db.execute("""SELECT * FROM jobs WHERE sha256=? AND name=?
@@ -117,7 +118,7 @@ def enqueue(path, root="Downloads", folder="Moodle"):
                     output.flush()
                     os.fsync(output.fileno())
                     if digest(temporary) != sha:
-                        raise DeliveryError("FILE_CHANGED", "Le fichier a change pendant sa mise en attente.")
+                        raise DeliveryError("FILE_CHANGED", tr('The file changed while being queued.'))
                     os.replace(temporary, blob)
                 finally:
                     temporary.unlink(missing_ok=True)
@@ -175,18 +176,18 @@ def adopt_legacy():
 def exchange(data):
     client_id = data.get("client_id", "")
     if not re.fullmatch(r"[0-9a-f]{32}", client_id):
-        raise DeliveryError("INVALID_CLIENT", "Identifiant du Mac invalide.")
+        raise DeliveryError("INVALID_CLIENT", tr('Invalid Mac client ID.'))
     accepted = []
     with database() as db:
         bound = setting(db, "client_id")
         if bound and bound != client_id:
-            raise DeliveryError("OTHER_MAC", "La file est deja associee a un autre Mac.")
+            raise DeliveryError("OTHER_MAC", tr('The queue is already paired with another Mac.'))
         set_setting(db, "client_id", client_id)
         set_setting(db, "last_seen_at", now())
         snapshot = data.get("snapshot")
         if snapshot is not None:
             if not isinstance(snapshot, dict) or len(json.dumps(snapshot)) > 2_000_000:
-                raise DeliveryError("INVALID_SNAPSHOT", "Arborescence trop grande ou invalide.")
+                raise DeliveryError("INVALID_SNAPSHOT", tr('Folder inventory is too large or invalid.'))
             set_setting(db, "snapshot", snapshot)
         for receipt in data.get("receipts", [])[:100]:
             row = db.execute("SELECT * FROM jobs WHERE id=?", (receipt.get("id"),)).fetchone()
@@ -200,7 +201,7 @@ def exchange(data):
             accepted.append(row["id"])
         for failure in data.get("failures", [])[:100]:
             db.execute("UPDATE jobs SET last_error=?,attempts=attempts+1 WHERE id=? AND status='queued'",
-                       (str(failure.get("error", "Erreur locale"))[:500], failure.get("id")))
+                       (str(failure.get("error", tr('Local error')))[:500], failure.get("id")))
     adopt_legacy()
     cleanup()
     with database() as db:
@@ -212,7 +213,7 @@ def exchange(data):
 def list_folders(root="Documents", folder="", query="", offset=0, limit=50):
     destination(root, folder)
     if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
-        raise DeliveryError("INVALID_PAGE", "Pagination invalide (limit 1..100).")
+        raise DeliveryError("INVALID_PAGE", tr('Invalid pagination (limit must be 1..100).'))
     with database() as db:
         snapshot = setting(db, "snapshot") or {}
         seen = setting(db, "last_seen_at")
@@ -227,7 +228,7 @@ def list_folders(root="Documents", folder="", query="", offset=0, limit=50):
             "items": items[offset:end], "total": len(items), "next_offset": end if end < len(items) else None,
             "last_seen_at": seen, "snapshot_at": snapshot.get("scanned_at"),
             "snapshot_limits": snapshot.get("limits", {}), "access_errors": snapshot.get("errors", {}),
-            "note": "Derniere arborescence connue, potentiellement obsolete. Un dossier manquant sera cree au depot.",
+            "note": tr('Last known folder inventory; it may be out of date. Missing folders are created on delivery.'),
             "content_trust": "untrusted_mac_paths"}
 
 
@@ -241,14 +242,14 @@ def status(job_id=None):
     return {"last_seen_at": seen, "counts": counts,
             "jobs": [{k: row[k] for k in ("id", "name", "status", "destination_root", "destination_folder",
                      "created_at", "delivered_at", "final_path", "last_error", "attempts")} for row in rows],
-            "note": "delivered signifie reception verifiee par SHA-256 sur le Mac; queued attend la prochaine connexion."}
+            "note": tr('delivered means SHA-256 verified receipt on the Mac; queued is waiting for the next connection.')}
 
 
 def export(job_id):
     with database() as db:
         row = db.execute("SELECT sha256 FROM jobs WHERE id=? AND status='queued'", (job_id,)).fetchone()
     if not row:
-        raise DeliveryError("INVALID_JOB", "Transfert absent ou deja livre.")
+        raise DeliveryError("INVALID_JOB", tr('Transfer is missing or already delivered.'))
     blob = STATE / "payloads" / row["sha256"]
     with blob.open("rb") as stream:
         shutil.copyfileobj(stream, sys.stdout.buffer)
@@ -263,7 +264,7 @@ if __name__ == "__main__":
         elif len(sys.argv) == 3 and sys.argv[1] == "export" and re.fullmatch(r"[0-9a-f]{32}", sys.argv[2]):
             export(sys.argv[2])
         else:
-            raise DeliveryError("INVALID_COMMAND", "Utiliser rpc ou export JOB_ID via SSH.")
+            raise DeliveryError("INVALID_COMMAND", tr('Use rpc or export JOB_ID over SSH.'))
     except Exception as exc:
-        print(f"Transfert en echec : {exc.code if isinstance(exc, DeliveryError) else type(exc).__name__}", file=sys.stderr)
+        print(f"Transfer failed: {exc.code if isinstance(exc, DeliveryError) else type(exc).__name__}", file=sys.stderr)
         sys.exit(1)

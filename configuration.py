@@ -1,4 +1,5 @@
 """Small, dependency-free configuration shared by every entry point."""
+from i18n import translate as tr
 import json
 import os
 from pathlib import Path
@@ -31,9 +32,9 @@ def campus_url(value):
     parts = urlsplit(value)
     if (parts.scheme != 'https' or not parts.hostname or parts.username is not None
             or parts.password is not None or parts.query or parts.fragment):
-        raise ValueError('Utilisez une URL HTTPS sans identifiants, parametres ni fragment.')
+        raise ValueError(tr('Use an HTTPS URL without credentials, query parameters or a fragment.'))
     if any(c.isspace() or ord(c) < 32 for c in value) or '\\' in value:
-        raise ValueError('URL Moodle invalide.')
+        raise ValueError(tr('Invalid Moodle URL.'))
     # Force validation of the optional port as well.
     parts.port
     return urlunsplit(parts._replace(path=parts.path.rstrip('/')))

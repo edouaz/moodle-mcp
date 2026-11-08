@@ -1,4 +1,5 @@
 """Install the official tunnel-client release, verifying GitHub's SHA-256 digest."""
+from i18n import translate as tr
 import hashlib
 import io
 import json
@@ -20,18 +21,18 @@ def main():
     system = {'Linux': 'linux', 'Darwin': 'darwin'}.get(platform.system())
     architecture = {'x86_64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}.get(platform.machine())
     if not system or not architecture:
-        raise ValueError('macOS/Linux amd64 et arm64 uniquement. Voir les releases officielles.')
+        raise ValueError(tr('Only macOS/Linux amd64 and arm64 are supported. See the official releases.'))
     release = json.loads(fetch('https://api.github.com/repos/openai/tunnel-client/releases/latest'))
     name = f"tunnel-client-{release['tag_name']}-{system}-{architecture}.zip"
     asset = next((a for a in release['assets'] if a['name'] == name), None)
     if not asset:
-        raise ValueError('Aucun binaire pour cette plateforme dans la release officielle.')
+        raise ValueError(tr('No binary for this platform in the official release.'))
     url = asset['browser_download_url']
     if not url.startswith('https://github.com/openai/tunnel-client/releases/download/'):
-        raise ValueError('URL de release inattendue.')
+        raise ValueError(tr('Unexpected release URL.'))
     archive = fetch(url)
     if asset.get('digest') != 'sha256:' + hashlib.sha256(archive).hexdigest():
-        raise ValueError('Empreinte SHA-256 absente ou incorrecte : installation refusee.')
+        raise ValueError(tr('Missing or incorrect SHA-256 digest: installation refused.'))
     with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
         binary = bundle.read('tunnel-client')
     destination = Path.home() / '.local/bin/tunnel-client'
@@ -44,7 +45,7 @@ def main():
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
-    print(f"Client officiel {release['tag_name']} installe dans {destination}")
+    print(f"Official client {release['tag_name']} installed at {destination}")
 
 
 if __name__ == '__main__':
@@ -52,4 +53,4 @@ if __name__ == '__main__':
     try:
         main()
     except Exception:
-        raise SystemExit('Installation echouee. Voir https://github.com/openai/tunnel-client/releases/latest')
+        raise SystemExit(tr('Installation failed. See https://github.com/openai/tunnel-client/releases/latest'))

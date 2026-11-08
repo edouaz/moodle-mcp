@@ -129,8 +129,9 @@ class DeliveryTests(unittest.TestCase):
     def test_standalone_ssh_helper_protocol_export_and_ack(self):
         server = self.root / "standalone"
         server.mkdir()
-        for name in ("delivery.py", "session_lock.py"):
+        for name in ("delivery.py", "session_lock.py", "i18n.py"):
             shutil.copyfile(Path(__file__).parent / name, server / name)
+        shutil.copytree(Path(__file__).parent / "locales", server / "locales")
         source = server / "downloads/course-1/section/resource-2/hash/TP.pdf"
         source.parent.mkdir(parents=True)
         source.write_bytes(b"real protocol bytes")
