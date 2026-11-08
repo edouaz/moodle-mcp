@@ -100,6 +100,19 @@ class SyncTests(unittest.TestCase):
         self.assertTrue((destination / "keep.txt").exists())
         self.assertFalse((destination / "course-1").exists())
 
+    def test_legacy_migration_accepts_a_system_directory_alias(self):
+        actual = self.home / "actual"
+        actual.mkdir()
+        alias = self.home / "alias"
+        alias.symlink_to(actual, target_is_directory=True)
+        destination = alias / "Downloads/Moodle"
+        source = destination / "course-1/section/resource-2/hash/TP.pdf"
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b"legacy bytes")
+        sync_mac.migrate_legacy(alias, destination)
+        self.assertFalse(source.exists())
+        self.assertEqual((destination / "TP.pdf").read_bytes(), b"legacy bytes")
+
     def test_lost_ack_is_durable_and_retried_after_restart(self):
         state_dir = self.home / "state"
         def fake_run(*args, **kwargs):

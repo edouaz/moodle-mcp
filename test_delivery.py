@@ -35,6 +35,17 @@ class DeliveryTests(unittest.TestCase):
     def receipt(self, job):
         return {"id": job["id"], "sha256": job["sha256"], "final_path": "/Users/me/Documents/Uni/TP.pdf"}
 
+    def test_cache_root_alias_accepts_canonical_source_but_rejects_file_symlink(self):
+        alias = self.root / "alias"
+        alias.symlink_to(delivery.DOWNLOADS, target_is_directory=True)
+        with patch.object(delivery, "DOWNLOADS", alias):
+            queued = delivery.enqueue(self.source.resolve())
+            self.assertEqual(queued["source"], "course-1/section/resource-2/hash/TP.pdf")
+            link = alias / "link.pdf"
+            link.symlink_to(self.source)
+            with self.assertRaises(delivery.DeliveryError):
+                delivery.enqueue(link)
+
     def test_offline_queue_persists_and_duplicate_pending_request_reuses_job(self):
         first = delivery.enqueue(self.source, "Documents", "Uni")
         second = delivery.enqueue(self.source, "Documents", "Uni")

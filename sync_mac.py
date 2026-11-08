@@ -198,7 +198,7 @@ def migrate_legacy(home, destination):
     for source in sorted(destination.glob("course-*/*/resource-*/*/*")):
         if not source.is_file() or source.is_symlink() or source.name.startswith("."):
             continue
-        if any(parent.is_symlink() for parent in source.parents if parent != destination):
+        if any(parent.is_symlink() for parent in source.parents if parent.is_relative_to(destination)):
             continue
         job = {"id": uuid.uuid4().hex, "name": source.name, "sha256": path_hash(source),
                "bytes": source.stat().st_size, "destination_root": "Downloads", "destination_folder": "Moodle"}

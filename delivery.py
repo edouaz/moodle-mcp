@@ -89,7 +89,12 @@ def source_path(relative):
 def enqueue(path, root="Downloads", folder="Moodle"):
     destination(root, folder)
     path = Path(path)
-    relative = str(path.relative_to(DOWNLOADS))
+    if path.is_symlink():
+        raise DeliveryError("UNSAFE_PATH", "Lien symbolique source refuse.")
+    try:
+        relative = str(path.resolve().relative_to(DOWNLOADS.resolve()))
+    except ValueError:
+        raise DeliveryError("UNSAFE_PATH", "Fichier source hors du cache Moodle.") from None
     path = source_path(relative)
     if not path.is_file() or path.stat().st_size > MAX_BYTES:
         raise DeliveryError("INVALID_FILE", "Fichier source absent ou trop grand.")
