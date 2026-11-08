@@ -1,0 +1,17 @@
+# Generated for your actual checkout by: python3 moodle.py install-service
+# See docs/vps.md. Do not copy a unit with someone else's paths.
+[Unit]
+Description=Moodle MCP private tunnel (template)
+
+[Service]
+Type=simple
+# Replace both paths before using this template manually.
+WorkingDirectory=/absolute/path/to/moodle-mcp
+ExecStart=/absolute/path/to/moodle-mcp/.venv/bin/python /absolute/path/to/moodle-mcp/moodle.py tunnel run
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
