@@ -1,7 +1,7 @@
-# Sécurité
+# Security
 
-Ce projet est destiné à une installation personnelle. Chaque tunnel partage une seule session Moodle ; il ne fournit pas d’authentification multi-utilisateur.
+This project is designed for personal installations. Each tunnel shares one Moodle session; the server provides no multi-user application authentication.
 
-Ne publiez jamais de clés, cookies, captures de session ou ressources de cours dans une issue. Pour une vulnérabilité, utilisez le signalement privé de sécurité du dépôt s’il est disponible ; sinon contactez le mainteneur via son profil GitHub en décrivant d’abord le problème sans secret ni preuve sensible.
+Never publish keys, cookies, session screenshots or course materials in an issue. Use the repository’s private security reporting if available. Otherwise, contact the maintainer through their GitHub profile with an initial description containing no secrets or sensitive evidence.
 
-En cas de fuite : arrêtez le tunnel, révoquez la clé OpenAI, déconnectez les sessions universitaires concernées et supprimez le fichier exposé. Retirer un secret du dernier commit ne le retire pas de l’historique.
+If a credential leaks, stop the tunnel, revoke the OpenAI key, terminate affected university sessions and remove the exposed file. Removing a secret from the latest commit does not remove it from history.

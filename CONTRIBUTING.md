@@ -1,16 +1,18 @@
-# Contribuer
+# Contributing
 
-Les corrections, adaptations à d’autres thèmes Moodle et améliorations de documentation sont bienvenues. Décrivez l’établissement et le thème sans publier de données personnelles. Proposez des fixtures synthétiques pour les tests.
+Fixes, adapters for other Moodle themes and documentation improvements are welcome. Describe your institution and theme without publishing personal data. Use synthetic fixtures for tests.
 
-Installez le projet avec `bash setup.sh` (vous pouvez passer connexion et tunnel), puis lancez :
+Install with `bash setup.sh` (you can skip sign-in and tunnel), then run:
 
 ```bash
-.venv/bin/python -m unittest -v test_login_only test_targeted test_service test_mcp test_delivery test_sync_mac test_setup
+.venv/bin/python -m unittest -v test_login_only test_targeted test_service test_mcp test_delivery test_sync_mac test_setup test_i18n
 .venv/bin/python diagnose_mcp.py
 ```
 
-Les tests sont hors ligne et ne nécessitent aucun secret. Le diagnostic teste réellement le transport stdio ; il ne valide pas une connexion ChatGPT. `diagnose_mcp.py --live` est un ancien diagnostic propre à un cours d’exemple, à adapter avant toute utilisation ; ne l’exécutez pas en CI.
+Tests use no accounts or secrets. One parser test uses a local Chromium fixture. The diagnostic checks real stdio; it does not validate a ChatGPT connection. `diagnose_mcp.py --live` is a legacy course-specific diagnostic: adapt it before use and never run it in CI.
 
-Gardez les changements ciblés. Toute nouvelle donnée d’exécution doit rester exclue de Git. N’utilisez jamais `git add -f` pour les sessions, cours ou clés. Le site est statique dans `docs/` : aucun bundler, CDN ou service tiers n’est requis. Vérifiez ses liens et son affichage sur mobile avant une modification de présentation.
+English is the default language. See [translations](docs/translating.md) for runtime catalogs and website languages. Keep French documentation in sync when changing behavior.
 
-Vos contributions sont distribuées sous la licence MIT du projet.
+Keep changes focused. Exclude all new runtime data from Git. Never use `git add -f` for sessions, course files or keys. The static site lives in `docs/`, with no bundler, CDN or external service. Check links and mobile layout before changing presentation.
+
+Contributions are distributed under the project’s MIT license.

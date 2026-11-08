@@ -1,3 +1,3 @@
-Décrivez le problème et le comportement après modification.
+Describe the problem and resulting behavior.
 
-Validation : indiquez les tests exécutés et leurs résultats, sans données personnelles.
+Validation: list checks and results without personal data.

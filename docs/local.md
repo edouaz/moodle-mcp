@@ -1,8 +1,10 @@
-# Installation locale
+# Local installation
 
-## Préparer
+[Français](fr/local.md)
 
-Installez Git et Python 3.11+ (macOS ou Linux), puis :
+## Prepare
+
+Install Git and Python 3.11+ on macOS or Linux, then:
 
 ```bash
 git clone https://github.com/edouaz/moodle-mcp.git
@@ -10,17 +12,19 @@ cd moodle-mcp
 bash setup.sh
 ```
 
-Le bootstrap crée `.venv`, installe `requirements.txt` et Chromium, puis ouvre l’assistant. Sur Debian/Ubuntu, installez `python3-venv` si nécessaire. Si Chromium signale des bibliothèques manquantes sous Linux :
+The bootstrap creates `.venv`, installs `requirements.txt` and Chromium, then opens the wizard. On Debian/Ubuntu, install `python3-venv` if needed. If Chromium reports missing system libraries on Linux:
 
 ```bash
 .venv/bin/python -m playwright install --with-deps chromium
 ```
 
-Entrez l’URL racine de Moodle, en conservant un éventuel sous-dossier `/moodle`. N’entrez pas `/login/index.php` ou l’URL d’un cours. Choisissez `local`. Dans Chromium, terminez la connexion universitaire, affichez la liste de vos cours et revenez au terminal pour appuyer sur Entrée. Aucun mot de passe n’est lu par le setup.
+Enter the Moodle base URL, keeping any `/moodle` subdirectory. Do not enter `/login/index.php` or a course URL. Choose `local`. In Chromium, complete university sign-in, open your course list, then return to the terminal and press Enter. Setup never reads your university password.
 
-Choisissez ensuite le tunnel ou passez cette étape. La configuration se trouve dans `.moodle/config.json`. `CAMPUS_BASE` peut remplacer l’URL pour un processus ; évitez de le laisser défini si vous souhaitez utiliser l’URL du setup.
+Configure the tunnel or skip that step. Settings are in `.moodle/config.json`. `CAMPUS_BASE` overrides the URL for a process; unset it to use the saved setting.
 
-## Vérifier
+English is the default. Use `bash setup.sh --lang fr` for French, or `MOODLE_MCP_LANG=fr` for subsequent commands.
+
+## Verify
 
 ```bash
 python3 moodle.py doctor
@@ -28,11 +32,11 @@ python3 moodle.py session
 python3 moodle.py courses
 ```
 
-Le premier vérifie le serveur MCP sans interroger Moodle. Les suivants utilisent votre session. `next_offset` indique la page suivante : transmettez-le avec `--offset`.
+The first checks MCP without accessing Moodle. The others use your session. Pass `next_offset` back as `--offset` for the next page.
 
-## Client MCP local
+## Local MCP client
 
-Dans la configuration de votre client, adaptez les chemins absolus :
+Adjust the absolute paths in your client’s configuration:
 
 ```json
 {
@@ -45,10 +49,10 @@ Dans la configuration de votre client, adaptez les chemins absolus :
 }
 ```
 
-La forme exacte du fichier dépend du client. Le serveur lit l’URL enregistrée même si le client démarre depuis un autre répertoire. Aucun tunnel ni clé OpenAI n’est nécessaire pour stdio.
+The exact configuration format depends on the client. The server reads the saved URL even when launched from another directory. Stdio requires neither a tunnel nor an OpenAI key. Set `MOODLE_MCP_LANG` in the client’s child-process environment for translated runtime messages; MCP tool descriptions remain English.
 
 ## Windows
 
-Le verrouillage de session utilise `fcntl` : Windows natif n’est pas pris en charge. Utilisez WSL2 avec Python et WSLg ou un affichage équivalent, et installez le projet dans le système de fichiers Linux. Ce chemin n’a pas été validé sur cette machine ; macOS/Linux sont les cibles principales.
+Session locking uses `fcntl`, so native Windows is unsupported. Use WSL2 with Python and WSLg or an equivalent display, and install the project in the Linux filesystem. This path has not been validated on the development machine; macOS/Linux are the primary targets.
 
-[Accueil](../README.md) · [VPS](vps.md) · [Dépannage](troubleshooting.md)
+[Home](../README.md) · [VPS](vps.md) · [Troubleshooting](troubleshooting.md)

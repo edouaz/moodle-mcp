@@ -1,5 +1,5 @@
-# Configuration MCP
+# MCP configuration
 
-La documentation maintenue se trouve dans [le guide local](docs/local.md), [le guide tunnel](docs/tunnel.md) et [la référence des outils](docs/reference.md).
+See the maintained [local guide](docs/local.md), [tunnel guide](docs/tunnel.md) and [tool reference](docs/reference.md).
 
-Démarrage : `bash setup.sh`, puis `python3 moodle.py doctor` et `python3 moodle.py tunnel run` si vous utilisez le tunnel.
+Start with `bash setup.sh`, then `python3 moodle.py doctor` and `python3 moodle.py tunnel run` if using the tunnel. French: `bash setup.sh --lang fr`.

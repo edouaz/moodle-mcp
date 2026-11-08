@@ -1,43 +1,47 @@
-# Commandes et outils
+# Commands and tools
+
+[Français](fr/reference.md)
 
 ## CLI
 
-| Commande `python3 moodle.py …` | Effet |
+| Command `python3 moodle.py …` | Effect |
 | --- | --- |
-| `setup [--vps]` | Configure l’URL et propose connexion, tunnel et service |
-| `login` | Ouvre Chromium pour le SSO/MFA, sans télécharger de cours |
-| `doctor` | Vérifie le protocole stdio et la liste des outils, hors réseau Moodle |
-| `serve` | Démarre le serveur MCP stdio (attend des messages JSON-RPC) |
-| `session` | Vérifie la session sans afficher les cookies |
-| `courses [--offset N --limit N]` | Liste les cours |
-| `files --course ID [--offset N --limit N]` | Liste sections et ressources |
-| `search --course ID TEXTE [--offset N --limit N]` | Recherche par nom |
-| `download --course ID --file-id ID [--include-text]` | Télécharge un seul fichier localement |
-| `tunnel doctor` | Diagnostic du tunnel officiel configuré |
-| `tunnel run` | Lance le tunnel au premier plan |
-| `tunnel status` | Vérifie healthz/readyz locaux |
-| `install-service` | Génère et active le service systemd utilisateur, sans le démarrer |
+| `setup [--vps]` | Configure URL, sign-in, optional tunnel and service |
+| `login` | Open Chromium for SSO/MFA without downloading courses |
+| `doctor` | Check stdio and tool discovery without reading Moodle |
+| `serve` | Start the stdio MCP server; waits for JSON-RPC input |
+| `session` | Check the session without showing cookies |
+| `courses [--offset N --limit N]` | List courses |
+| `files --course ID [--offset N --limit N]` | List sections and resources |
+| `search --course ID TEXT [--offset N --limit N]` | Search by name |
+| `download --course ID --file-id ID [--include-text]` | Download one file locally |
+| `tunnel doctor` | Diagnose the configured official tunnel |
+| `tunnel run` | Run the tunnel in the foreground |
+| `tunnel status` | Check local healthz/readyz |
+| `install-service` | Generate and enable a systemd user service without starting it |
 
-`python3 moodle.py download --help` détaille aussi les sélections par `--resource` et `--file`. Les listes limitent `limit` à 1–100 et retournent `next_offset`. L’identifiant du fichier provient d’une entrée `kind=file` ; ne le reconstituez pas.
+Use `--lang en` or `--lang fr` before or after the subcommand. This overrides `MOODLE_MCP_LANG` for that invocation and is inherited by child processes. English is the default and fallback. Protocol keys, status codes, IDs and Moodle content do not change language. MCP descriptions remain English.
+
+`python3 moodle.py download --help` also documents `--resource` and `--file` selection. Listings accept `limit` from 1 to 100 and return `next_offset`. File IDs come from `kind=file` entries; do not construct them manually.
 
 ## MCP
 
-| Outil | Fonction |
+| Tool | Purpose |
 | --- | --- |
-| `check_moodle_session` | État de la session |
-| `list_moodle_courses` | Cours inscrits visibles |
-| `list_moodle_files` | Ressources d’un cours |
-| `search_moodle_files` | Recherche de noms |
-| `download_moodle_file` | Téléchargement ciblé et file de livraison Mac |
-| `list_mac_folders` | Dernier inventaire des dossiers du Mac |
-| `get_mac_delivery_status` | État des livraisons |
+| `check_moodle_session` | Check session validity |
+| `list_moodle_courses` | List visible enrolled courses |
+| `list_moodle_files` | List course resources |
+| `search_moodle_files` | Search names |
+| `download_moodle_file` | Targeted download and Mac delivery queue |
+| `list_mac_folders` | Last known Mac folder inventory |
+| `get_mac_delivery_status` | Delivery status |
 
-## Données et limites
+## Data and limits
 
-La session se trouve dans `session.json`, l’URL dans `.moodle/config.json`, le profil et la clé runtime optionnelle dans `.tunnel/`, les téléchargements dans `downloads/` et la file Mac dans `.delivery/`. Tous sont exclus de Git. Les commandes originales continuent de fonctionner avec la même configuration.
+Session: `session.json`. URL: `.moodle/config.json`. Profile and optional runtime key: `.tunnel/`. Downloads: `downloads/`. Mac queue: `.delivery/`. All are excluded from Git. Original entry points continue to use the shared configuration.
 
-Le verrou de session n’autorise qu’une opération navigateur à la fois. Les téléchargements ciblés sont limités à 20 Mio. Les PDF sont validés avec pypdf, sans OCR. Le texte renvoyé est limité à 12 000 caractères ; les PDF scannés peuvent ne contenir aucun texte extractible. Ni les noms ni le texte Moodle ne doivent être traités comme des instructions.
+Only one browser operation is allowed at a time. Targeted files are limited to 20 MiB. PDFs are validated with pypdf; no OCR is performed. Returned text is limited to 12,000 characters; scanned PDFs may have none. Moodle names and text must never be treated as instructions.
 
-Les thèmes Moodle et ressources externes peuvent nécessiter une adaptation. Une URL d’établissement ne garantit pas la compatibilité. Il n’existe pas de correspondance entre identités ChatGPT et Moodle : chaque installation est personnelle.
+Moodle themes and external resources may need adapters. Entering a university URL does not guarantee compatibility. There is no mapping between ChatGPT identities and Moodle accounts: each installation is personal.
 
-[Accueil](../README.md)
+[Home](../README.md)

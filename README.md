@@ -1,24 +1,24 @@
-<p align="center"><img src="docs/assets/logo.svg" width="112" alt="Moodle MCP, une petite page coiffée d’un mortier orange"></p>
+<p align="center"><img src="docs/assets/logo.svg" width="112" alt="Moodle MCP, a little page wearing an orange graduation cap"></p>
 <h1 align="center">Moodle MCP</h1>
-<p align="center"><strong>Moins de clics. Plus de cours. 🎓</strong><br>Vos ressources Moodle dans votre assistant, avec une session qui reste chez vous.</p>
-<p align="center"><a href="https://edouaz.github.io/moodle-mcp/">Le site</a> · <a href="https://edouaz.github.io/moodle-mcp/guide.html">Guide de démarrage</a> · <a href="docs/vps.md">Installation VPS</a></p>
-<p align="center"><a href="https://github.com/edouaz/moodle-mcp/actions/workflows/ci.yml"><img src="https://github.com/edouaz/moodle-mcp/actions/workflows/ci.yml/badge.svg" alt="Tests"></a> <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+"> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-orange" alt="Licence MIT"></a></p>
+<p align="center"><strong>Fewer clicks. More learning. 🎓</strong><br>Your Moodle resources in your assistant, with a session that stays on your machine.</p>
+<p align="center"><strong>English</strong> · <a href="docs/fr/README.md">Français</a><br><a href="https://edouaz.github.io/moodle-mcp/">Website</a> · <a href="https://edouaz.github.io/moodle-mcp/guide.html">Getting started</a> · <a href="docs/vps.md">VPS guide</a></p>
+<p align="center"><a href="https://github.com/edouaz/moodle-mcp/actions/workflows/ci.yml"><img src="https://github.com/edouaz/moodle-mcp/actions/workflows/ci.yml/badge.svg" alt="Tests"></a> <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+"> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-orange" alt="MIT license"></a></p>
 
-Moodle MCP utilise un vrai navigateur pour accéder à vos cours, même lorsque l’API mobile de l’université est désactivée. Connectez-vous vous-même via le SSO/MFA de votre établissement ; le serveur MCP et la CLI réutilisent cette session pour lister, rechercher et télécharger les ressources choisies.
+Moodle MCP uses a real browser to access your courses, even when your university disables the mobile API. Sign in yourself through your institution’s SSO/MFA; the MCP server and CLI reuse that session to list, search and download the resources you choose.
 
-## ✨ Ce que vous pouvez faire
+## ✨ What you can do
 
-- Retrouver vos cours et rechercher un support par son nom.
-- Télécharger un fichier précis, sans collecter tous les cours.
-- Lire jusqu’à 12 000 caractères de texte d’un PDF dans votre assistant.
-- Faire fonctionner le serveur sur votre Mac, un ordinateur Linux ou un VPS.
-- Recevoir les fichiers d’un VPS sur votre Mac avec le client SSH optionnel.
+- Find your courses and search for handouts by name.
+- Download one selected file without collecting every course.
+- Read up to 12,000 characters of extracted PDF text in your assistant.
+- Run the server on your Mac, a Linux computer or a VPS.
+- Receive files from your VPS on your Mac with the optional SSH client.
 
-Aucun outil ne modifie Moodle ni ne soumet de devoir. Le serveur reste privé : transport stdio en local, ou tunnel OpenAI sortant pour les clients compatibles.
+No tool modifies Moodle or submits assignments. The server stays private: local stdio, or an outbound OpenAI tunnel for compatible clients.
 
-## 🚀 Démarrage
+## 🚀 Get started
 
-**Prérequis :** Git, Python 3.11+ et macOS ou Linux. Windows : utiliser WSL2 avec un affichage graphique fonctionnel. Pour un VPS, Ubuntu 24.04 ou Debian 12+ avec systemd sont les chemins documentés.
+**Requirements:** Git, Python 3.11+ and macOS or Linux. On Windows, use WSL2 with a working graphical display. Ubuntu 24.04 or Debian 12+ with systemd are the documented VPS starting points.
 
 ```bash
 git clone https://github.com/edouaz/moodle-mcp.git
@@ -26,68 +26,83 @@ cd moodle-mcp
 bash setup.sh
 ```
 
-L’assistant installe les dépendances et Chromium, puis vous guide :
+Setup installs dependencies and Chromium, then walks you through:
 
-1. URL **racine** de votre Moodle, par exemple `https://campus.example.edu/moodle`.
-2. Installation locale ou VPS.
-3. Connexion dans le navigateur de l’université, avec votre SSO/MFA.
-4. Tunnel OpenAI optionnel : identifiant, clé runtime masquée et conservation locale au choix.
+1. Your Moodle **base URL**, such as `https://campus.example.edu/moodle`.
+2. Local or VPS installation.
+3. Browser sign-in with your university’s SSO/MFA.
+4. An optional OpenAI tunnel: ID, hidden runtime key input and optional private storage.
 
-**Aucun token Moodle n’est nécessaire.** La clé demandée concerne uniquement le tunnel OpenAI. Vous pouvez passer cette étape pour utiliser la CLI ou un client MCP stdio.
+**No Moodle token is required.** The key requested is only for the OpenAI tunnel. Skip that step for CLI use or a local stdio MCP client.
 
-Sur VPS : `bash setup.sh --vps` installe aussi les dépendances système de Chromium et peut demander `sudo`. La connexion Moodle exige un affichage sécurisé ; voir le [guide VPS](docs/vps.md) avant de commencer sur une machine sans écran.
+On a VPS, use `bash setup.sh --vps`. It also installs Chromium’s system dependencies and may request `sudo`. Moodle sign-in needs a secure graphical display; read the [VPS guide](docs/vps.md) before setting up a headless machine.
 
-## 🧭 Au quotidien
+## 🌍 Languages
+
+English is the default for the website, documentation, CLI and MCP tool descriptions. The website has an **EN / FR** switch; [French documentation](docs/fr/README.md) remains available.
 
 ```bash
-python3 moodle.py login          # connexion ou renouvellement de la session
-python3 moodle.py doctor         # vérifie le protocole MCP, sans lire vos cours
-python3 moodle.py session        # vérifie la session Moodle
-python3 moodle.py courses        # liste vos cours, sans téléchargement
-python3 moodle.py files --course 123 --limit 50
-python3 moodle.py search --course 123 "TP1"
-python3 moodle.py download --course 123 --file-id "IDENTIFIANT_RETOURNE_PAR_LA_LISTE" --include-text
-python3 moodle.py tunnel run     # reste au premier plan ; Ctrl-C pour arrêter
+bash setup.sh --lang fr
+python3 moodle.py --lang fr setup
+MOODLE_MCP_LANG=fr python3 moodle.py courses
 ```
 
-Remplacez `123` et l’identifiant de fichier par les valeurs obtenues dans les listes. La CLI utilise automatiquement le Python de `.venv`. Le script historique `scraper.py` **sans option télécharge tous les cours** ; utilisez `moodle.py` pour les opérations ciblées.
+`--lang` works before or after the subcommand and overrides `MOODLE_MCP_LANG` for that invocation. The language is inherited by child processes. Set the environment variable in your shell or service for a persistent preference. Upstream browser/install output and some diagnostic messages remain in English. Course titles, filenames, JSON keys and IDs are never translated.
 
-## 💬 Brancher votre assistant
+Translations live in [`locales/fr.json`](locales/fr.json); see the [translation guide](docs/translating.md) to add a language.
 
-Pour un client MCP local, configurez la commande absolue `…/moodle-mcp/.venv/bin/python` avec l’argument absolu `…/moodle-mcp/mcp_server.py`. Exemple complet dans le [guide local](docs/local.md).
+## 🧭 Everyday commands
 
-Pour un client OpenAI compatible : créez un tunnel dans [OpenAI Platform](https://platform.openai.com/settings/organization/tunnels), configurez-le dans l’assistant CLI puis lancez `python3 moodle.py tunnel run`. Ajoutez une connexion MCP de type **Tunnel** dans votre client, si votre compte/espace le permet. L’accès et les permissions du tunnel sont requis ; l’installation du projet ne les crée pas automatiquement. Voir le [guide tunnel](docs/tunnel.md) et la [documentation officielle OpenAI](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
+```bash
+python3 moodle.py login          # sign in or renew your session
+python3 moodle.py doctor         # check MCP without reading your courses
+python3 moodle.py session        # check your Moodle session
+python3 moodle.py courses        # list courses without downloading files
+python3 moodle.py files --course 123 --limit 50
+python3 moodle.py search --course 123 "Worksheet1"
+python3 moodle.py download --course 123 --file-id "ID_FROM_THE_LISTING" --include-text
+python3 moodle.py tunnel run     # foreground; Ctrl-C to stop
+```
 
-Essayez : « Liste mes cours », puis « Cherche le TP1 dans ce cours ». La connexion est validée après un appel réussi depuis votre assistant ; le diagnostic local ne vérifie pas cet accès.
+Replace `123` and the file ID with values from the listings. The CLI automatically uses `.venv` Python. The legacy `scraper.py` **without options downloads all courses**; use `moodle.py` for targeted operations.
 
-## 🔒 Votre session reste personnelle
+## 💬 Connect your assistant
 
-`session.json`, `.moodle/`, `.tunnel/`, les téléchargements et les files de livraison sont exclus de Git par une liste explicite de sources publiables. La session et les clés enregistrées ont des permissions `600`.
+For a local MCP client, set the absolute command `…/moodle-mcp/.venv/bin/python` with the absolute argument `…/moodle-mcp/mcp_server.py`. See the [local guide](docs/local.md) for a full configuration example.
 
-Le tunnel donne accès à **votre session Moodle** à toute personne autorisée à l’utiliser. Gardez-le personnel. Le texte extrait d’un PDF sélectionné est envoyé à votre assistant ; le PDF complet n’est pas une pièce jointe automatique. Les fichiers sont limités à 20 Mio par téléchargement ciblé. Le client Mac est optionnel et réservé à macOS.
+For a compatible OpenAI client, create a tunnel in [OpenAI Platform](https://platform.openai.com/settings/organization/tunnels), configure it through setup and run `python3 moodle.py tunnel run`. Add a **Tunnel** MCP connection in your client if your account/workspace supports it. Tunnel permissions are required; installing this project does not grant them. See the [tunnel guide](docs/tunnel.md) and [official OpenAI documentation](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
 
-Le fonctionnement dépend du thème et de la configuration Moodle. Les autres universités doivent être vérifiées ; SSO/MFA et accès au compte ne sont jamais contournés.
+Try “List my courses”, then “Find Worksheet1 in this course”. A successful call from your assistant confirms the connection; the local diagnostic alone does not.
+
+## 🔒 Your session is personal
+
+`session.json`, `.moodle/`, `.tunnel/`, downloads and delivery queues are excluded from Git through an explicit source allowlist. Saved sessions and keys have `600` permissions.
+
+Anyone authorized to use your tunnel can access **your Moodle session**. Keep it personal. Selected PDF text is sent to your assistant; a complete PDF does not automatically become a ChatGPT attachment. Targeted downloads are limited to 20 MiB per file. The optional Mac delivery client requires macOS.
+
+Compatibility depends on the Moodle theme and configuration. Other universities need verification; SSO/MFA and account restrictions are never bypassed.
 
 ## 📚 Documentation
 
-| Besoin | Guide |
+| Need | Guide |
 | --- | --- |
-| Installation locale et client MCP | [Local](docs/local.md) |
-| Serveur permanent, SSO sur VPS et service | [VPS](docs/vps.md) |
-| Tunnel et clé runtime | [Tunnel OpenAI](docs/tunnel.md) |
-| Recevoir les fichiers sur Mac | [Synchronisation SSH](docs/mac-sync.md) |
-| Commandes et sept outils MCP | [Référence](docs/reference.md) |
-| Reconnexion, erreurs et désinstallation | [Dépannage](docs/troubleshooting.md) |
+| Local installation and MCP client | [Local](docs/local.md) |
+| Permanent server, VPS sign-in and service | [VPS](docs/vps.md) |
+| Tunnel and runtime key | [OpenAI tunnel](docs/tunnel.md) |
+| Receive files on your Mac | [SSH sync](docs/mac-sync.md) |
+| Commands and seven MCP tools | [Reference](docs/reference.md) |
+| Reconnect, troubleshoot and uninstall | [Troubleshooting](docs/troubleshooting.md) |
+| Add another language | [Translations](docs/translating.md) |
 
-## 🛠️ Contribuer
+## 🛠️ Contribute
 
 ```bash
-.venv/bin/python -m unittest -v test_login_only test_targeted test_service test_mcp test_delivery test_sync_mac test_setup
+.venv/bin/python -m unittest -v test_login_only test_targeted test_service test_mcp test_delivery test_sync_mac test_setup test_i18n
 .venv/bin/python diagnose_mcp.py
 ```
 
-Ces tests n’ont besoin ni de compte Moodle ni de clé OpenAI. Voir [CONTRIBUTING.md](CONTRIBUTING.md), la [politique de sécurité](SECURITY.md) et le [journal des changements](CHANGELOG.md).
+Tests require neither a Moodle account nor an OpenAI key. See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and the [changelog](CHANGELOG.md).
 
-## Licence et crédits
+## License and credits
 
-[MIT](LICENSE). Basé sur [moodle-browser-scraper](https://github.com/thntx/moodle-browser-scraper) de thntx ; son copyright et son [README d’origine](README_UPSTREAM.md) sont conservés. Moodle MCP est un projet indépendant, sans affiliation avec Moodle, Apple, OpenAI ou une université. Le logo est une création vectorielle propre au projet.
+[MIT](LICENSE). Based on [moodle-browser-scraper](https://github.com/thntx/moodle-browser-scraper) by thntx; its copyright and [original README](README_UPSTREAM.md) are preserved. Moodle MCP is independent, with no affiliation to Moodle, Apple, OpenAI or a university. The logo is an original vector illustration.

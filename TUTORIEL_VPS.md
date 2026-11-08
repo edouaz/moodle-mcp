@@ -1,5 +1,5 @@
-# Installation VPS
+# VPS installation
 
-Le tutoriel générique est disponible dans [docs/vps.md](docs/vps.md).
+The maintained tutorial is in [docs/vps.md](docs/vps.md). A [French edition](docs/fr/vps.md) is also available.
 
-Pour recevoir les fichiers sur Mac, consultez [docs/mac-sync.md](docs/mac-sync.md).
+To receive files on your Mac, see [docs/mac-sync.md](docs/mac-sync.md).

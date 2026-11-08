@@ -1,39 +1,41 @@
-# Recevoir les fichiers sur Mac
+# Receive files on your Mac
 
-Le MCP met les téléchargements en attente dans `.delivery/` sur le serveur. Le client macOS récupère les fichiers via SSH, vérifie le SHA-256 et confirme leur réception. Le serveur nettoie ensuite les copies livrées. Ce client est optionnel ; la CLI `moodle.py download` télécharge localement sans utiliser cette file.
+[Français](fr/mac-sync.md)
 
-## Préparer SSH
+MCP queues downloads in `.delivery/` on the server. The macOS client fetches files over SSH, verifies SHA-256 and acknowledges receipt. The server then cleans up delivered copies. This client is optional; `moodle.py download` saves locally without using this queue.
 
-Configurez une clé SSH vers votre serveur et effectuez une première connexion interactive pour vérifier son empreinte :
+## Prepare SSH
+
+Set up an SSH key and make an initial interactive connection to verify the host fingerprint:
 
 ```bash
-ssh etudiant@vps.example.org
+ssh student@vps.example.org
 ```
 
-Le client refuse les hôtes inconnus et fonctionne sans invite de mot de passe. Un alias dans `~/.ssh/config` peut simplifier le nom d’hôte. Le compte SSH doit accéder au checkout et à son répertoire `.delivery/`. Python 3.11+ doit être disponible via `python3` sur le serveur.
+The client rejects unknown hosts and runs without password prompts. An alias in `~/.ssh/config` can simplify the host name. The SSH account needs access to the checkout and `.delivery/`. Python 3.11+ must be available as `python3` on the server.
 
-## Installer sur le Mac
+## Install on the Mac
 
-Clonez le projet et créez un environnement Python comme décrit dans le [guide local](local.md). Il n’est pas nécessaire de configurer une deuxième session Moodle ni un deuxième tunnel. Dans le checkout du Mac :
+Clone the project and create a Python environment as described in the [local guide](local.md). No second Moodle session or tunnel is needed. From the Mac checkout:
 
 ```bash
 .venv/bin/python sync_mac.py install \
-  --host etudiant@vps.example.org \
+  --host student@vps.example.org \
   --remote-path project/moodle-mcp/downloads
 ```
 
-`--remote-path` est le chemin des téléchargements sur le serveur, relatif au dossier personnel SSH ou absolu. Le helper `delivery.py` doit être dans son dossier parent. Adaptez-le si votre checkout est ailleurs. Le client teste une première synchronisation puis installe un LaunchAgent toutes les 30 secondes.
+`--remote-path` is the server downloads path, relative to the SSH home or absolute. `delivery.py` must live in its parent directory. Adjust the path to match your checkout. The client attempts an initial sync, then installs a LaunchAgent that runs every 30 seconds.
 
-Le MCP peut choisir `Documents`, `Desktop` ou `Downloads`, puis un sous-dossier relatif. Le dépôt par défaut est `~/Downloads/Moodle/NOM.pdf`. Les doublons différents reçoivent un suffixe ; les chemins absolus et traversées de répertoires sont refusés. macOS peut demander l’accès aux dossiers concernés.
+MCP can select `Documents`, `Desktop` or `Downloads` and a relative subfolder. The default is `~/Downloads/Moodle/NAME.pdf`. Different files with the same name get a suffix; absolute destinations and path traversal are rejected. macOS may request folder access.
 
 ```bash
 .venv/bin/python sync_mac.py status
-.venv/bin/python sync_mac.py once --host etudiant@vps.example.org --remote-path project/moodle-mcp/downloads
+.venv/bin/python sync_mac.py once --host student@vps.example.org --remote-path project/moodle-mcp/downloads
 .venv/bin/python sync_mac.py uninstall
 ```
 
-L’ancien label LaunchAgent `fr.edouard.moodle-downloads` est conservé pour permettre les mises à jour. Ses journaux se trouvent dans `~/Library/Logs/fr.edouard.moodle-downloads.log`.
+The legacy LaunchAgent label `fr.edouard.moodle-downloads` is preserved for upgrades. Logs are in `~/Library/Logs/fr.edouard.moodle-downloads.log`.
 
-Seuls les noms de dossiers Documents/Desktop/Downloads sont publiés dans l’inventaire, jamais le contenu des documents. Le snapshot peut être ancien ou partiel. Seul `get_mac_delivery_status` avec `delivered` confirme la réception. Un Mac éteint conserve les fichiers en attente côté VPS.
+Only folder names from Documents/Desktop/Downloads enter the inventory, never document contents. Snapshots can be stale or partial. Only `get_mac_delivery_status` with `delivered` confirms receipt. Files stay queued on the VPS while the Mac is off.
 
-[Accueil](../README.md) · [Référence](reference.md)
+[Home](../README.md) · [Reference](reference.md)
